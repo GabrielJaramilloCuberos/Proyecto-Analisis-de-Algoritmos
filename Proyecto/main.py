@@ -82,7 +82,7 @@ def cuadroFinal(event,canvas):
 
     global inicio, rect_preview, rectangulos, color_actual
 
-    if inicio is None or rect_pre: 
+    if inicio is None or rect_preview: 
         return
 
     coords = canvas.coords(rect_preview)
