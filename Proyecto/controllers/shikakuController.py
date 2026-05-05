@@ -1,5 +1,3 @@
-import random
-
 from Proyecto.models import tableros as repositorio_tableros
 from Proyecto.models.Shikaku import Shikaku
 from Proyecto.models.rectangulo import Rectangulo
@@ -14,6 +12,7 @@ class ShikakuController:
         self.filaInicio = None
         self.colInicio = None
         self.colorActual = None
+        self.vista.reiniciarColoresDisponibles()
         self.tamanioCelda = 0
         self.dimensionVentana = "200x200"
 
@@ -54,6 +53,7 @@ class ShikakuController:
         self.colorActual = None
         self.tamanioCelda = 0
         self.dimensionVentana = "200x200"
+        self.vista.reiniciarColoresDisponibles()
         self.vista.mostrarMenu(self)
 
     def resolverJuego(self):
@@ -67,6 +67,7 @@ class ShikakuController:
         self.modelo.rectangulos.clear()
         self.vista.borrarRectangulo()
         self.vista.limpiarRectangulosUsuario()
+        self.vista.reiniciarColoresDisponibles()
 
         solucion = self.modelo.solucionador()
         if solucion is None:
@@ -82,7 +83,9 @@ class ShikakuController:
             x2 = (rectanguloSolucion.columnaFinal + 1) * self.tamanioCelda
             y2 = (rectanguloSolucion.filaFinal + 1) * self.tamanioCelda
 
-            color = random.choice(self.vista.coloresDisponibles)
+            color = self.vista.obtenerColorDisponible()
+            if color is None:
+                color = "gray"
             self.vista.consolidarRectangulo(x1, y1, x2, y2, color)
 
     def onClickInicial(self, event):
@@ -112,7 +115,8 @@ class ShikakuController:
                         f"[DEBUG] rectangulo eliminado fila={filaInicio}-{filaFin} "
                         f"col={colInicio}-{colFin}"
                     )
-                    self.vista.eliminarRectanguloPorId(rectanguloId)
+                    colorRectangulo = self.vista.eliminarRectanguloPorId(rectanguloId)
+                    self.vista.liberarColor(colorRectangulo)
 
                 self.filaInicio = None
                 self.colInicio = None
@@ -122,7 +126,12 @@ class ShikakuController:
 
         self.filaInicio = event.y // self.tamanioCelda
         self.colInicio = event.x // self.tamanioCelda
-        self.colorActual = random.choice(self.vista.coloresDisponibles)
+        self.colorActual = self.vista.obtenerColorDisponible()
+        if self.colorActual is None:
+            print("[DEBUG] no hay colores disponibles")
+            self.filaInicio = None
+            self.colInicio = None
+            return
         print(
             f"[DEBUG] seleccion inicio fila={self.filaInicio} col={self.colInicio} "
             f"color={self.colorActual}"
@@ -186,6 +195,7 @@ class ShikakuController:
             print(f"[DEBUG] rectangulo creado total={len(self.modelo.rectangulos)}")
         else:
             print("[DEBUG] rectangulo rechazado")
+            self.vista.liberarColor(self.colorActual)
 
         self.vista.borrarRectangulo()
 

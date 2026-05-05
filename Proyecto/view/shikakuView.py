@@ -1,5 +1,6 @@
 import tkinter as tk
 
+
 class ShikakuView(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -9,17 +10,42 @@ class ShikakuView(tk.Tk):
         self.frameActual = None
         self.canvas = None
         self.rectPreviewId = None
+        self.coloresDisponibles = []
+        self.reiniciarColoresDisponibles()
+
+    def reiniciarColoresDisponibles(self):
         self.coloresDisponibles = [
-            "red", "blue", "green", "yellow", "purple", "orange",
-            "pink", "cyan", "magenta", "lime", "teal", "lavender",
-            "brown", "beige", "maroon", "mint cream", "navy",
-            "aquamarine", "turquoise", "gold", "coral", "salmon",
-            "khaki", "plum", "orchid", "crimson", "indigo", "violet",
-            "tan", "sky blue", "light green", "light blue", "light coral",
-            "light pink", "dark green", "dark blue", "dark red",
-            "dark orange", "deep pink", "dodger blue", "forest green",
-            "hot pink", "medium purple", "royal blue", "spring green",
+            ["red", False], ["blue", False], ["green", False], ["yellow", False],
+            ["purple", False], ["orange", False], ["pink", False], ["cyan", False],
+            ["magenta", False], ["lime", False], ["teal", False], ["lavender", False],
+            ["brown", False], ["beige", False], ["maroon", False], ["mint cream", False],
+            ["navy", False], ["aquamarine", False], ["turquoise", False], ["gold", False],
+            ["coral", False], ["salmon", False], ["khaki", False], ["plum", False],
+            ["orchid", False], ["crimson", False], ["indigo", False], ["violet", False],
+            ["tan", False], ["sky blue", False], ["light green", False], ["light blue", False],
+            ["light coral", False], ["light pink", False], ["dark green", False],
+            ["dark blue", False], ["dark red", False], ["dark orange", False],
+            ["deep pink", False], ["dodger blue", False], ["forest green", False],
+            ["hot pink", False], ["medium purple", False], ["royal blue", False],
+            ["spring green", False],
         ]
+
+    def obtenerColorDisponible(self):
+        for colorInfo in self.coloresDisponibles:
+            if not colorInfo[1]:
+                colorInfo[1] = True
+                return colorInfo[0]
+
+        return None
+
+    def liberarColor(self, color):
+        if color is None:
+            return
+
+        for colorInfo in self.coloresDisponibles:
+            if colorInfo[0] == color:
+                colorInfo[1] = False
+                return
 
     def limpiarFrameActual(self):
         if self.frameActual is not None:
@@ -148,7 +174,11 @@ class ShikakuView(tk.Tk):
 
     def eliminarRectanguloPorId(self, rectanguloId):
         if self.canvas is not None:
+            color = self.canvas.itemcget(rectanguloId, "fill")
             self.canvas.delete(rectanguloId)
+            return color
+
+        return None
 
     def obtenerIdsRectangulosUsuario(self):
         if self.canvas is None:

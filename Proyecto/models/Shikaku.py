@@ -97,6 +97,9 @@ class Shikaku:
 
         return areaRectangulos == areaTotalTablero
 
+
+    #Este no se usa, ahora se va a usar el ExactCover para que sea mas eficiente
+    # Igual es que es un NP asi que eficiente eficiente tampoco sera  :/
     def generarDominios(self):
         totalFilas = len(self.matriz)
         totalColumnas = len(self.matriz[0]) if totalFilas > 0 else 0
@@ -129,14 +132,15 @@ class Shikaku:
                                         break
 
                                 if valido:
-                                    opcionesValidas.append(
-                                        Rectangulo(
-                                            filaInicial,
-                                            filaInicial + alto - 1,
-                                            colInicial,
-                                            colInicial + ancho - 1,
-                                        )
+                                    nuevoRectangulo = Rectangulo(
+                                        filaInicial,
+                                        filaInicial + alto - 1,
+                                        colInicial,
+                                        colInicial + ancho - 1,
                                     )
+
+                                    nuevoRectangulo.calcularMascara(totalColumnas)
+                                    opcionesValidas.append(nuevoRectangulo)
 
                     dominios.append(
                         {
@@ -147,52 +151,91 @@ class Shikaku:
 
         return dominios
 
+    def generarOpcionesExactCover(self):
+        totalFilas = len(self.matriz)
+        totalColumnas = len(self.matriz[0]) if totalFilas > 0 else 0
+        totalCeldas = totalFilas * totalColumnas
+        
+        todasLasOpciones = []
+        idPistaActual = 0
+
+        for fila in range(totalFilas):
+            for columna in range(totalColumnas):
+                valor = self.matriz[fila][columna]
+                if valor != 0:
+                    for alto in range(1, valor + 1):
+                        if valor % alto != 0:
+                            continue
+
+                        ancho = valor // alto
+                        filaMin = max(0, fila - alto + 1)
+                        filaMax = min(totalFilas - alto + 1, fila + 1)
+                        colMin = max(0, columna - ancho + 1)
+                        colMax = min(totalColumnas - ancho + 1, columna + 1)
+
+                        for filaInicial in range(filaMin, filaMax):
+                            for colInicial in range(colMin, colMax):
+                                # Validación de encierro
+                                valido = True
+                                for r in range(filaInicial, filaInicial + alto):
+                                    for c in range(colInicial, colInicial + ancho):
+                                        if self.matriz[r][c] != 0 and (r != fila or c != columna):
+                                            valido = False
+                                            break
+                                    if not valido:
+                                        break
+
+                                if valido:
+                                    # Creado con el idPistaActual
+                                    nuevoRectangulo = Rectangulo(
+                                        filaInicial,
+                                        filaInicial + alto - 1,
+                                        colInicial,
+                                        colInicial + ancho - 1,
+                                        idPistaActual
+                                    )
+                                    nuevoRectangulo.calcularMascara(totalColumnas, totalCeldas)
+                                    todasLasOpciones.append(nuevoRectangulo)
+
+                    idPistaActual += 1
+
+        return todasLasOpciones, idPistaActual
+
     def solapan(self, rectanguloUno, rectanguloDos):
-        return not (
-            rectanguloUno.filaFinal < rectanguloDos.filaInicio
-            or rectanguloUno.filaInicio > rectanguloDos.filaFinal
-            or rectanguloUno.columnaFinal < rectanguloDos.columnaInicio
-            or rectanguloUno.columnaInicio > rectanguloDos.columnaFinal
-        )
+        return (rectanguloUno.mascara & rectanguloDos.mascara) != 0
 
     def solucionador(self):
-        dominios = self.generarDominios()
+        opcionesRestantes, totalPistas = self.generarOpcionesExactCover()
+        
+        totalFilas = len(self.matriz)
+        totalColumnas = len(self.matriz[0]) if totalFilas > 0 else 0
+        totalCeldas = totalFilas * totalColumnas
 
-        def backtracking(restantes, colocados):
-            if not restantes:
-                return colocados
+        objetivoFinal = (1 << (totalCeldas + totalPistas)) - 1
 
-            restantes = sorted(restantes, key=lambda var: len(var["opciones"]))
-            actual = restantes[0]
-
-            for candidato in actual["opciones"]:
-                nuevosDominios = []
-                ramaMuerta = False
-
-                for otroCandidato in restantes[1:]:
-                    filtradas = []
-                    for opcion in otroCandidato["opciones"]:
-                        if not self.solapan(candidato, opcion):
-                            filtradas.append(opcion)
-
-                    if len(filtradas) == 0:
-                        ramaMuerta = True
-                        break
-
-                    nuevosDominios.append(
-                        {
-                            "id": otroCandidato["id"],
-                            "opciones": filtradas,
-                        }
-                    )
-
-                if ramaMuerta:
-                    continue
-
-                solucion = backtracking(nuevosDominios, colocados + [candidato])
-                if solucion is not None:
-                    return solucion
-
+        def algoritmoX(estadoActual, opciones):
+            if estadoActual == objetivoFinal:
+                return []
+                
+            bitsFaltantes = ~estadoActual & objetivoFinal
+            bitMasBajoFaltante = (bitsFaltantes & -bitsFaltantes).bit_length() - 1
+            
+            candidatos = [op for op in opciones if (op.mascara & (1 << bitMasBajoFaltante)) != 0]
+            
+            if not candidatos:
+                return None
+                
+            for candidato in candidatos:
+                if (estadoActual & candidato.mascara) == 0:
+                    nuevoEstado = estadoActual | candidato.mascara
+                    
+                    nuevasOpciones = [op for op in opciones if (op.mascara & candidato.mascara) == 0]
+                    
+                    resultado = algoritmoX(nuevoEstado, nuevasOpciones)
+                    if resultado is not None:
+                        return [candidato] + resultado
+                        
             return None
+            
+        return algoritmoX(0, opcionesRestantes)
 
-        return backtracking(dominios, [])
